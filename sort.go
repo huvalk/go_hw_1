@@ -10,8 +10,9 @@ import (
 	"strings"
 )
 
-type pair struct {
-	value string
+type wordState struct {
+	original string
+	current string
 	pos int
 }
 
@@ -69,17 +70,12 @@ func  parseCommands(args []string) map[string]int {
 	return commands
 }
 
-func usualSort(words []string) []string{
-	sort.Strings(words)
-
-	return words
-}
-
-func fixateOrder(words []string) []pair {
-	var fixedOrderWords []pair
+func lockOrder(words []string) []wordState {
+	var fixedOrderWords []wordState
 	for pos := range words {
-		fixedOrderWords = append(fixedOrderWords, pair {
-			value: words[pos],
+		fixedOrderWords = append(fixedOrderWords, wordState{
+			original: words[pos],
+			current: words[pos],
 			pos: pos,
 		})
 	}
@@ -87,54 +83,43 @@ func fixateOrder(words []string) []pair {
 	return fixedOrderWords
 }
 
-func freeOrder(fixedOrderWords []pair) []string {
-	var words []string
-	for pos := range fixedOrderWords {
-		words = append(words, fixedOrderWords[pos].value)
-	}
-
-	return words
-}
-
-func sortIgnoreCase(words []string) []string{
-	fixedOrderWords := fixateOrder(words)
-
-	sort.Slice(fixedOrderWords, func(i, j int) bool {
-		firstNum := strings.ToUpper(fixedOrderWords[i].value)
-		secondNum := strings.ToUpper(fixedOrderWords[j].value)
-		if firstNum == secondNum {
-			return fixedOrderWords[i].pos < fixedOrderWords[j].pos
-		}
-
-		return  firstNum < secondNum
-	})
-
-	return freeOrder(fixedOrderWords)
-}
-
-func sortNumb(words []string) []string{
+func usualSort(words []wordState) []wordState{
 	sort.Slice(words, func(i, j int) bool {
-		firstNum, _ := strconv.ParseFloat(words[i], 32)
-		secondNum, _ := strconv.ParseFloat(words[j], 32)
+		if words[i].current == words[j].current {
+			return words[i].pos < words[j].pos
+		} else {
+			return  words[i].current < words[j].current
+		}
+	})
+
+	return words
+}
+
+func sortNumb(words []wordState) []wordState{
+	sort.Slice(words, func(i, j int) bool {
+		firstNum, _ := strconv.ParseFloat(words[i].current, 32)
+		secondNum, _ := strconv.ParseFloat(words[j].current, 32)
 		return  firstNum < secondNum
 	})
 
 	return words
 }
 
-func reverseSlice(words []string) []string{
-	for i, j := 0, len(words)-1; i < j; i, j = i+1, j-1 {
-		words[i], words[j] = words[j], words[i]
+func ignoreCase(words []wordState) []wordState{
+	for pos := range words {
+		words[pos].current = strings.ToUpper(words[pos].current)
 	}
 
 	return words
 }
 
-func uniqueSlice(words []string) []string{
-	var uniqueWords []string
+
+
+func uniqueSlice(words []wordState) []wordState{
+	var uniqueWords []wordState
 	uniqueWords = append(uniqueWords, words[0])
 	for i, j := 0, 0; i < len(words); i++ {
-		if words[i] != uniqueWords[j] {
+		if words[i].current != uniqueWords[j].current {
 			uniqueWords = append(uniqueWords, words[i])
 			j++
 		}
@@ -143,18 +128,12 @@ func uniqueSlice(words []string) []string{
 	return uniqueWords
 }
 
-func uniqueSliceIgnoreCase(words []string) []string{
-	var uniqueWords []string
-	uniqueWords = append(uniqueWords, words[0])
-	for i, j := 1, 0; i < len(words); i++ {
-		if strings.ToUpper(words[i]) == strings.ToUpper(uniqueWords[j]) {
-			continue
-		}
-		uniqueWords = append(uniqueWords, words[i])
-		j++
+func reverseSlice(words []wordState) []wordState{
+	for i, j := 0, len(words)-1; i < j; i, j = i+1, j-1 {
+		words[i], words[j] = words[j], words[i]
 	}
 
-	return uniqueWords
+	return words
 }
 
 func findOutPath(commands map[string]int, pos int) string {
@@ -167,7 +146,7 @@ func findOutPath(commands map[string]int, pos int) string {
 	return ""
 }
 
-func writeInFile(words []string, commands map[string]int, pos int) {
+func writeInFile(words []wordState, commands map[string]int, pos int) {
 	outPath := findOutPath(commands, pos)
 
 	file, err := os.Create(outPath)
@@ -179,11 +158,17 @@ func writeInFile(words []string, commands map[string]int, pos int) {
 	defer file.Close()
 
 	for pos := range words {
-		_, err := file.WriteString(words[pos])
+		_, err := file.WriteString(words[pos].original)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	}
+}
+
+func printResult(words []wordState) {
+	for pos := range words {
+		fmt.Println(words[pos].original)
 	}
 }
 
@@ -192,32 +177,33 @@ func sortInputSlice(words []string, commands map[string]int) {
 		return
 	}
 
-	var ignoreCase bool
-	if _, commandExist := commands["-n"]; commandExist {
-		words = sortNumb(words)
-	} else if _, commandExist := commands["-f"]; commandExist {
-		words = sortIgnoreCase(words)
-		ignoreCase = true
-	} else {
-		words = usualSort(words)
+	wordsState := lockOrder(words)
+
+	if _, commandExist := commands["-f"]; commandExist {
+		wordsState = ignoreCase(wordsState)
 	}
 
-	if _, commandExist := commands["-r"]; commandExist {
-		words = reverseSlice(words)
+	needUsualSort := true
+	if _, commandExist := commands["-n"]; commandExist {
+		wordsState = sortNumb(wordsState)
+		needUsualSort = false
+	}
+	if needUsualSort {
+		wordsState = usualSort(wordsState)
 	}
 
 	if _, commandExist := commands["-u"]; commandExist {
-		if ignoreCase {
-			words = uniqueSliceIgnoreCase(words)
-		} else {
-			words = uniqueSlice(words)
-		}
+		wordsState = uniqueSlice(wordsState)
+	}
+
+	if _, commandExist := commands["-r"]; commandExist {
+		wordsState = reverseSlice(wordsState)
 	}
 
 	if pos, commandExist := commands["-o"]; commandExist {
-		writeInFile(words, commands, pos)
+		writeInFile(wordsState, commands, pos)
 	} else {
-		fmt.Println(words)
+		printResult(wordsState)
 	}
 }
 
