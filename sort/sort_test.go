@@ -1,9 +1,16 @@
 package main
 
 import (
+	"os"
 	"regexp"
 	"testing"
 )
+
+var testColumnSortOut = `ffw
+ga awg
+dad daw
+g1 ga
+`
 
 var testDefaultSortOut = `Apple
 BOOK
@@ -48,6 +55,18 @@ var testNumberSortOut = `.12
 `
 
 var testInvalidNumberSortOut = "Invalid commands"
+
+func TestColumnSort(t *testing.T) {
+	result := Execute([]string{
+		"-k",
+		"1",
+		"data_columns.txt",
+	})
+
+	if testColumnSortOut != result {
+		t.Errorf("TestColumnSort faild")
+	}
+}
 
 func TestDefaultSort(t *testing.T) {
 	result := Execute([]string{
@@ -125,5 +144,24 @@ func TestInvalidNumberSort (t *testing.T) {
 
 	if !matched {
 		t.Errorf("TestInvalidNumberSort faild")
+	}
+}
+
+func TestWriteInFile (t *testing.T) {
+	Execute([]string{
+		"-o",
+		"result.txt",
+		"data.txt",
+	})
+
+	exists := true
+	info, err := os.Stat("result.txt")
+	if os.IsNotExist(err) {
+		exists = false
+	}
+	exists = !info.IsDir()
+
+	if !exists {
+		t.Errorf("TestWriteInFile faild")
 	}
 }

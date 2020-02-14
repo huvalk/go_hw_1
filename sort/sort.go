@@ -17,23 +17,21 @@ type wordState struct {
 	pos int
 }
 
-func parseFileName(args []string) string {
+func parseFileName(args map[string]int) string {
 	var fileName string
-	for n, arg := range args {
-		matched, _ := regexp.Match(`^[:alpha:]+\w*`, []byte(arg))
+	for key, value := range args {
+		matched, _ := regexp.Match(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt|zip))`, []byte(key))
 
-		if matched {
-			if (n >= 1 && args[n-1] != "-o") || n <= 0 {
-				fileName = arg
-				break
-			}
+		if matched && value == len(args)-1 {
+			fileName = key
+			break
 		}
 	}
 
 	return fileName
 }
 
-func readInputFile(args []string) ([]string, error) {
+func readInputFile(args map[string]int) ([]string, error) {
 	fileContent, err := ioutil.ReadFile(parseFileName(args))
 
 	if err != nil {
@@ -47,11 +45,17 @@ func  parseCommands(args []string) (map[string]int, error) {
 	commands := make(map[string]int)
 
 	for pos, arg := range args {
-		matchedFlag, err := regexp.Match(`^-?\w$|[:alpha:]+|[:digit:]+`, []byte(arg))
+		matchedFlag, errFlag := regexp.Match(`^-?[A-Za-z]+$|^[0-9]+`, []byte(arg))
+		if errFlag != nil {
+			return map[string]int{}, errFlag
+		}
 
-		//TODO доделать определение пути файла
+		matchedFile, errFile := regexp.Match(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt|zip))`, []byte(arg))
+		if errFile != nil {
+			return map[string]int{}, errFile
+		}
 
-		if err != nil || !matchedFlag {
+		if matchedFlag == false && matchedFile == false {
 			return map[string]int{}, errors.New("Invalid commands")
 		} else {
 			commands[arg] = pos
@@ -185,7 +189,7 @@ func writeInFile(words []wordState, commands map[string]int, pos int) error {
 	defer file.Close()
 
 	for pos := range words {
-		_, errWrite := file.WriteString(words[pos].original)
+		_, errWrite := file.WriteString(words[pos].original + "\n")
 		if errWrite != nil {
 			return errWrite
 		}
@@ -244,15 +248,17 @@ func sortInputSlice(words []string, commands map[string]int) string {
 }
 
 func Execute(args []string) string {
-	inputSlice, errRead := readInputFile(args)
-	if errRead != nil {
-		return errRead.Error()
-	}
-
 	commands, errParse := parseCommands(args)
 	if errParse != nil {
 		return errParse.Error()
 	}
+
+	inputSlice, errRead := readInputFile(commands)
+	if errRead != nil {
+		return errRead.Error()
+	}
+
+
 
 	return sortInputSlice(inputSlice, commands)
 }
