@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -39,10 +40,6 @@ func (s *stackS) Pop() string {
 	res:=(*s)[len(*s)-1]
 	*s=(*s)[:len(*s)-1]
 	return res
-}
-
-func parseArgs(args []string) string {
-	return strings.Join(args, "")
 }
 
 func getOpPriority(operator string) int {
@@ -83,7 +80,11 @@ func valueMatching(expression string) (float64, string, bool) {
 	return parsedVal, matchedVal, err == nil
 }
 
-func calculate(expression string) float64 {
+func calculate(expression string) (float64, error) {
+	if expression == "" {
+		return 0, nil
+	}
+
 	var funcs stackS
 	var values stackF
 	previousSymbol := nothing
@@ -91,8 +92,7 @@ func calculate(expression string) float64 {
 	for len(expression) != 0 {
 		if expression[:1] == "(" {
 			if previousSymbol == value {
-				//TODO возврат ошибок
-				fmt.Println("Пропущен оператор")
+				return 0, errors.New("Пропущен оператор")
 			}
 
 			funcs.Push("(")
@@ -103,8 +103,7 @@ func calculate(expression string) float64 {
 				values, funcs = doOperation(values, funcs)
 			}
 			if len(funcs) == 0 {
-				//TODO возврат ошибок
-				fmt.Println("Скобка не закрыта")
+				return 0, errors.New("Скобка не открыта")
 			}
 
 			funcs.Pop()
@@ -112,8 +111,7 @@ func calculate(expression string) float64 {
 			previousSymbol = value
 		} else if operationMatched(expression[:1]) {
 			if previousSymbol == operation  {
-				//TODO возврат ошибок
-				fmt.Println("Пропущен операнд")
+				return 0, errors.New("Пропущен операнд")
 			}
 
 			if previousSymbol == nothing {
@@ -129,34 +127,40 @@ func calculate(expression string) float64 {
 			previousSymbol = operation
 		} else if parsedVal, matchedVal, valueMatched := valueMatching(expression); valueMatched {
 			if previousSymbol == value  {
-				//TODO возврат ошибок
-				fmt.Println("Пропущен оператор")
+				return 0, errors.New("Пропущен оператор")
 			}
 
 			values.Push(parsedVal)
 			expression = expression[utf8.RuneCountInString(matchedVal):]
 			previousSymbol = value
 		} else {
-			fmt.Println("Ошибка 117")
-			//TODO нераспознанный символ. Кидаем ошибку
+			return 0, errors.New("Нераспознанный символ")
 		}
 
 	}
 
-	for len(funcs) != 0 {
+	for len(funcs) != 0 && len(values) > 1 {
+		if funcs[len(funcs)-1] == "(" {
+			return 0, errors.New("Скобка не закрыта")
+		}
 		values, funcs = doOperation(values, funcs)
 	}
 
-	return values[0]
+	return values[0], nil
 }
 
-func Execute(args []string) {
-	//expression := parseArgs(args)
-	expression := "2+2*3-4"
+func Execute(expression string) string {
+	result, errCalc := calculate(expression)
+	if errCalc != nil {
+		return errCalc.Error()
+	}
 
-	println(calculate(expression))
+	return fmt.Sprint(result)
 }
 
 func main() {
-	Execute(os.Args[1:])
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+
+	fmt.Println(Execute(text[:len(text)-1]))
 }

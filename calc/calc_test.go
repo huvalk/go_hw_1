@@ -1,167 +1,96 @@
 package main
 
 import (
-	"os"
-	"regexp"
 	"testing"
 )
 
-var testColumnSortOut = `ffw
-ga awg
-dad daw
-g1 ga
-`
+var TestUsualExpOut = "60"
 
-var testDefaultSortOut = `Apple
-BOOK
-Book
-Go
-Hauptbahnhof
-January
-January
-Napkin
-`
+var TestBracketsExpOut = "12"
 
-var testReverseSortOut = `Napkin
-January
-January
-Hauptbahnhof
-Go
-Book
-BOOK
-Apple
-`
+var TestUnaryExpOut = "0"
 
-var testUniqueSortOut = `Apple
-BOOK
-Book
-Go
-Hauptbahnhof
-January
-Napkin
-`
+var TestNotFinishedExpOut = "-3"
 
-var testUniqueCaseSortOut = `Apple
-BOOK
-Go
-Hauptbahnhof
-January
-Napkin
-`
-var testNumberSortOut = `.12
-15.6
-32
-1e2
-`
+var TestOperatorsInARowExpOut = "Пропущен операнд"
 
-var testInvalidNumberSortOut = "Invalid commands"
+var TestOperandsInARowExpOut = "Пропущен оператор"
 
-func TestColumnSort(t *testing.T) {
-	result := Execute([]string{
-		"-k",
-		"1",
-		"data_columns.txt",
-	})
+var TestUnknownSymbolExpOut = "Нераспознанный символ"
 
-	if testColumnSortOut != result {
-		t.Errorf("TestColumnSort faild")
+var TestMissingClosingBracketExpOut = "Скобка не открыта"
+
+var TestMissingOpeningBracketExpOut = "Скобка не закрыта"
+
+
+func TestUsualExp(t *testing.T) {
+	result := Execute("48+42*18/63")
+
+	if TestUsualExpOut != result {
+		t.Errorf("TestUsualExp faild")
 	}
 }
 
-func TestDefaultSort(t *testing.T) {
-	result := Execute([]string{
-		"data.txt",
-	})
+func TestBracketsExp(t *testing.T) {
+	result := Execute("12-(-2+2)*3")
 
-	if testDefaultSortOut != result {
-		t.Errorf("TestDefaultSort faild")
+	if TestBracketsExpOut != result {
+		t.Errorf("TestBracketsExp faild")
 	}
 }
 
-func TestInvalidCommand(t *testing.T) {
-	result := Execute([]string{
-		"?:faa",
-		"data.txt",
-	})
+func TestUnaryExp(t *testing.T) {
+	result := Execute("-2+2")
 
-	if "Invalid commands" != result {
-		t.Errorf("TestInvalidCommand faild")
+	if TestUnaryExpOut != result {
+		t.Errorf("TestUnaryExp faild")
 	}
 }
 
-func TestReverseSort(t *testing.T) {
-	result := Execute([]string{
-		"-r",
-		"data.txt",
-	})
+func TestNotFinishedExp(t *testing.T) {
+	result := Execute("2*2-7+")
 
-	if result != testReverseSortOut {
-		t.Errorf("TestReverseSort faild")
+	if TestNotFinishedExpOut != result {
+		t.Errorf("TestNotFinishedExp faild")
 	}
 }
 
-func TestUniqueSort(t *testing.T) {
-	result := Execute([]string{
-		"-u",
-		"data.txt",
-	})
+func TestOperatorsInARowExp(t *testing.T) {
+	result := Execute("-2++2")
 
-	if result != testUniqueSortOut {
-		t.Errorf("TestUniqueSort faild")
+	if TestOperatorsInARowExpOut != result {
+		t.Errorf("TestOperatorsInARowExp faild")
 	}
 }
 
-func TestUniqueCaseSort (t *testing.T) {
-	result := Execute([]string{
-		"-u",
-		"-f",
-		"data.txt",
-	})
+func TestOperandsInARowExp(t *testing.T) {
+	result := Execute("-2.2.2")
 
-	if result != testUniqueCaseSortOut {
-		t.Errorf("TestUniqueCaseSort faild")
+	if TestOperandsInARowExpOut != result {
+		t.Errorf("TestOperandsInARowExp faild")
 	}
 }
 
-func TestNumberSort (t *testing.T) {
-	result := Execute([]string{
-		"-n",
-		"data_number.txt",
-	})
+func TestUnknownSymbolExp(t *testing.T) {
+	result := Execute("-22;2")
 
-	if result != testNumberSortOut {
-		t.Errorf("TestNumberSort faild")
+	if TestUnknownSymbolExpOut != result {
+		t.Errorf("TestUnknownSymbolExp faild")
 	}
 }
 
-func TestInvalidNumberSort (t *testing.T) {
-	result := Execute([]string{
-		"-n",
-		"data_columns.txt",
-	})
+func TestMissingOpeningBracketExp(t *testing.T) {
+	result := Execute("3+2)")
 
-	matched, _ := regexp.Match(`invalid syntax$`, []byte(result))
-
-	if !matched {
-		t.Errorf("TestInvalidNumberSort faild")
+	if TestMissingClosingBracketExpOut != result {
+		t.Errorf("TestMissingOpeningBracketExp faild")
 	}
 }
 
-func TestWriteInFile (t *testing.T) {
-	Execute([]string{
-		"-o",
-		"result.txt",
-		"data.txt",
-	})
+func TestMissingClosingBracketExp(t *testing.T) {
+	result := Execute("2+(3+2")
 
-	exists := true
-	info, err := os.Stat("result.txt")
-	if os.IsNotExist(err) {
-		exists = false
-	}
-	exists = !info.IsDir()
-
-	if !exists {
-		t.Errorf("TestWriteInFile faild")
+	if TestMissingOpeningBracketExpOut != result {
+		t.Errorf("TestMissingnClosingBracketExp faild")
 	}
 }
