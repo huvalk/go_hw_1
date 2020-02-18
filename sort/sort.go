@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"sort"
@@ -17,23 +18,30 @@ type wordState struct {
 	pos int
 }
 
-func parseFileName(args map[string]int) string {
-	var fileName string
-	for key, value := range args {
-		matched, _ := regexp.Match(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt|zip))`, []byte(key))
+func parseFileName(args map[string]int) (fileName string, err error) {
+	regFileName := regexp.MustCompile(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt))`)
 
+	for key, value := range args {
+		matched := regFileName.MatchString(key)
 		if matched && value == len(args)-1 {
 			fileName = key
 			break
 		}
 	}
 
-	return fileName
+	if fileName == "" {
+		return "", errors.New("Невалидное имя файла")
+	}
+	return fileName, nil
 }
 
 func readInputFile(args map[string]int) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(parseFileName(args))
+	fileName, errFileName := parseFileName(args)
+	if errFileName != nil {
+		return []string{}, errFileName
+	}
 
+	fileContent, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return []string{}, err
 	}
@@ -44,16 +52,12 @@ func readInputFile(args map[string]int) ([]string, error) {
 func  parseCommands(args []string) (map[string]int, error) {
 	commands := make(map[string]int)
 
-	for pos, arg := range args {
-		matchedFlag, errFlag := regexp.Match(`^-?[A-Za-z]+$|^[0-9]+`, []byte(arg))
-		if errFlag != nil {
-			return map[string]int{}, errFlag
-		}
+	regFlag := regexp.MustCompile(`^-?[A-Za-z]+$|^[0-9]+`)
+	regFile := regexp.MustCompile(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt|zip))`)
 
-		matchedFile, errFile := regexp.Match(`^\/?([A-z0-9-_+]+\/)*([A-z0-9]+\.(txt|zip))`, []byte(arg))
-		if errFile != nil {
-			return map[string]int{}, errFile
-		}
+	for pos, arg := range args {
+		matchedFlag := regFlag.MatchString(arg)
+		matchedFile := regFile.MatchString(arg)
 
 		if matchedFlag == false && matchedFile == false {
 			return map[string]int{}, errors.New("Invalid commands")
@@ -132,11 +136,7 @@ func sortNumb(words []wordState) ([]wordState, error) {
 		return  firstNum < secondNum
 	})
 
-	if errParse != nil {
-		return []wordState{}, errParse
-	} else {
-		return words, nil
-	}
+	return words, errParse
 }
 
 func ignoreCase(words []wordState) []wordState{
@@ -207,9 +207,9 @@ func stringifyResult(words []wordState) string {
 	return result
 }
 
-func sortInputSlice(words []string, commands map[string]int) string {
+func sortInputSlice(words []string, commands map[string]int) (string, error) {
 	if len(words) == 0 {
-		return ""
+		return "", nil
 	}
 
 	wordsState := lockOrder(words)
@@ -226,7 +226,7 @@ func sortInputSlice(words []string, commands map[string]int) string {
 		var errNumber error
 		wordsState, errNumber = sortNumb(wordsState)
 		if errNumber != nil {
-			return errNumber.Error()
+			return "", errNumber
 		}
 	} else {
 		wordsState = usualSort(wordsState)
@@ -244,25 +244,30 @@ func sortInputSlice(words []string, commands map[string]int) string {
 		writeInFile(wordsState, commands, pos)
 	}
 
-	return stringifyResult(wordsState)
+	return stringifyResult(wordsState), nil
 }
 
-func Execute(args []string) string {
+func Execute(args []string) (string, error) {
 	commands, errParse := parseCommands(args)
 	if errParse != nil {
-		return errParse.Error()
+		return "", errParse
 	}
 
 	inputSlice, errRead := readInputFile(commands)
 	if errRead != nil {
-		return errRead.Error()
+		return "", errRead
 	}
-
-
 
 	return sortInputSlice(inputSlice, commands)
 }
 
 func main() {
-	fmt.Println(Execute(os.Args[1:]))
+	resultString, err := Execute(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println(resultString)
 }

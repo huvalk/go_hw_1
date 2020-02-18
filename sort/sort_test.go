@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"regexp"
 	"testing"
 )
 
@@ -57,7 +56,7 @@ var testNumberSortOut = `.12
 var testInvalidNumberSortOut = "Invalid commands"
 
 func TestColumnSort(t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"-k",
 		"1",
 		"data_columns.txt",
@@ -69,7 +68,7 @@ func TestColumnSort(t *testing.T) {
 }
 
 func TestDefaultSort(t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"data.txt",
 	})
 
@@ -79,18 +78,28 @@ func TestDefaultSort(t *testing.T) {
 }
 
 func TestInvalidCommand(t *testing.T) {
-	result := Execute([]string{
+	_, err := Execute([]string{
 		"?:faa",
 		"data.txt",
 	})
 
-	if "Invalid commands" != result {
+	if "Invalid commands" != err.Error() {
+		t.Errorf("TestInvalidCommand faild")
+	}
+}
+
+func TestFileDoesntExist(t *testing.T) {
+	_, err := Execute([]string{
+		"nodata.txt",
+	})
+
+	if err == nil {
 		t.Errorf("TestInvalidCommand faild")
 	}
 }
 
 func TestReverseSort(t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"-r",
 		"data.txt",
 	})
@@ -101,7 +110,7 @@ func TestReverseSort(t *testing.T) {
 }
 
 func TestUniqueSort(t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"-u",
 		"data.txt",
 	})
@@ -112,7 +121,7 @@ func TestUniqueSort(t *testing.T) {
 }
 
 func TestUniqueCaseSort (t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"-u",
 		"-f",
 		"data.txt",
@@ -124,7 +133,7 @@ func TestUniqueCaseSort (t *testing.T) {
 }
 
 func TestNumberSort (t *testing.T) {
-	result := Execute([]string{
+	result, _ := Execute([]string{
 		"-n",
 		"data_number.txt",
 	})
@@ -135,14 +144,14 @@ func TestNumberSort (t *testing.T) {
 }
 
 func TestInvalidNumberSort (t *testing.T) {
-	result := Execute([]string{
+	_, err := Execute([]string{
 		"-n",
 		"data_columns.txt",
 	})
 
-	matched, _ := regexp.Match(`invalid syntax$`, []byte(result))
+	//matched, _ := regexp.Match(`invalid syntax$`, []byte(err.Error()))
 
-	if !matched {
+	if err == nil {
 		t.Errorf("TestInvalidNumberSort faild")
 	}
 }
