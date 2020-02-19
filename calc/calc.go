@@ -90,7 +90,9 @@ func calculate(expression string) (float64, error) {
 	previousSymbol := nothing
 
 	for len(expression) != 0 {
-		if expression[:1] == "(" {
+		parsedVal, matchedVal, valueMatched := valueMatching(expression)
+		switch {
+		case expression[:1] == "(":
 			if previousSymbol == value {
 				return 0, errors.New("Пропущен оператор")
 			}
@@ -98,7 +100,7 @@ func calculate(expression string) (float64, error) {
 			funcs.Push("(")
 			expression = expression[1:]
 			previousSymbol = nothing
-		} else if expression[:1] == ")" {
+		case expression[:1] == ")":
 			for len(funcs) != 0 && funcs[len(funcs)-1] != "(" {
 				values, funcs = doOperation(values, funcs)
 			}
@@ -109,7 +111,7 @@ func calculate(expression string) (float64, error) {
 			funcs.Pop()
 			expression = expression[1:]
 			previousSymbol = value
-		} else if operationMatched(expression[:1]) {
+		case operationMatched(expression[:1]):
 			if previousSymbol == operation  {
 				return 0, errors.New("Пропущен операнд")
 			}
@@ -125,7 +127,7 @@ func calculate(expression string) (float64, error) {
 			funcs.Push(expression[:1])
 			expression = expression[1:]
 			previousSymbol = operation
-		} else if parsedVal, matchedVal, valueMatched := valueMatching(expression); valueMatched {
+		case valueMatched:
 			if previousSymbol == value  {
 				return 0, errors.New("Пропущен оператор")
 			}
@@ -133,7 +135,7 @@ func calculate(expression string) (float64, error) {
 			values.Push(parsedVal)
 			expression = expression[utf8.RuneCountInString(matchedVal):]
 			previousSymbol = value
-		} else {
+		default:
 			return 0, errors.New("Нераспознанный символ")
 		}
 
@@ -144,6 +146,10 @@ func calculate(expression string) (float64, error) {
 			return 0, errors.New("Скобка не закрыта")
 		}
 		values, funcs = doOperation(values, funcs)
+	}
+
+	if len(funcs) != 0 || len(values) > 1 {
+		return 0, errors.New(" Что-то пошло не так")
 	}
 
 	return values[0], nil

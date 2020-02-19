@@ -8,8 +8,7 @@ import (
 var testColumnSortOut = `ffw
 ga awg
 dad daw
-g1 ga
-`
+g1 ga`
 
 var testDefaultSortOut = `Apple
 BOOK
@@ -18,8 +17,7 @@ Go
 Hauptbahnhof
 January
 January
-Napkin
-`
+Napkin`
 
 var testReverseSortOut = `Napkin
 January
@@ -28,8 +26,7 @@ Hauptbahnhof
 Go
 Book
 BOOK
-Apple
-`
+Apple`
 
 var testUniqueSortOut = `Apple
 BOOK
@@ -37,29 +34,32 @@ Book
 Go
 Hauptbahnhof
 January
-Napkin
-`
+Napkin`
 
 var testUniqueCaseSortOut = `Apple
 BOOK
 Go
 Hauptbahnhof
 January
-Napkin
-`
+Napkin`
+
 var testNumberSortOut = `.12
 15.6
 32
-1e2
-`
+1e2`
 
 var testInvalidNumberSortOut = "Invalid commands"
 
 func TestColumnSort(t *testing.T) {
-	result, _ := Execute([]string{
-		"-k",
-		"1",
+	result, _ := Execute(Flags {
 		"data_columns.txt",
+		false,
+		false,
+		false,
+		false,
+		"",
+		1,
+
 	})
 
 	if testColumnSortOut != result {
@@ -68,8 +68,15 @@ func TestColumnSort(t *testing.T) {
 }
 
 func TestDefaultSort(t *testing.T) {
-	result, _ := Execute([]string{
+	result, _ := Execute(Flags {
 		"data.txt",
+		false,
+		false,
+		false,
+		false,
+		"",
+		-1,
+
 	})
 
 	if testDefaultSortOut != result {
@@ -77,20 +84,33 @@ func TestDefaultSort(t *testing.T) {
 	}
 }
 
-func TestInvalidCommand(t *testing.T) {
-	_, err := Execute([]string{
-		"?:faa",
-		"data.txt",
+func TestFileDoesntExist(t *testing.T) {
+	_, err := Execute(Flags {
+		"nodata.txt",
+		false,
+		false,
+		false,
+		false,
+		"",
+		-1,
+
 	})
 
-	if "Invalid commands" != err.Error() {
+	if err == nil {
 		t.Errorf("TestInvalidCommand faild")
 	}
 }
 
-func TestFileDoesntExist(t *testing.T) {
-	_, err := Execute([]string{
-		"nodata.txt",
+func TestFileDoesntSet(t *testing.T) {
+	_, err := Execute(Flags {
+		"",
+		false,
+		false,
+		false,
+		false,
+		"",
+		-1,
+
 	})
 
 	if err == nil {
@@ -99,9 +119,15 @@ func TestFileDoesntExist(t *testing.T) {
 }
 
 func TestReverseSort(t *testing.T) {
-	result, _ := Execute([]string{
-		"-r",
+	result, _ := Execute(Flags {
 		"data.txt",
+		false,
+		false,
+		true,
+		false,
+		"",
+		-1,
+
 	})
 
 	if result != testReverseSortOut {
@@ -110,9 +136,15 @@ func TestReverseSort(t *testing.T) {
 }
 
 func TestUniqueSort(t *testing.T) {
-	result, _ := Execute([]string{
-		"-u",
+	result, _ := Execute(Flags {
 		"data.txt",
+		false,
+		true,
+		false,
+		false,
+		"",
+		-1,
+
 	})
 
 	if result != testUniqueSortOut {
@@ -121,10 +153,15 @@ func TestUniqueSort(t *testing.T) {
 }
 
 func TestUniqueCaseSort (t *testing.T) {
-	result, _ := Execute([]string{
-		"-u",
-		"-f",
+	result, _ := Execute(Flags {
 		"data.txt",
+		true,
+		true,
+		false,
+		false,
+		"",
+		-1,
+
 	})
 
 	if result != testUniqueCaseSortOut {
@@ -133,9 +170,15 @@ func TestUniqueCaseSort (t *testing.T) {
 }
 
 func TestNumberSort (t *testing.T) {
-	result, _ := Execute([]string{
-		"-n",
+	result, _ := Execute(Flags {
 		"data_number.txt",
+		false,
+		false,
+		false,
+		true,
+		"",
+		-1,
+
 	})
 
 	if result != testNumberSortOut {
@@ -144,12 +187,16 @@ func TestNumberSort (t *testing.T) {
 }
 
 func TestInvalidNumberSort (t *testing.T) {
-	_, err := Execute([]string{
-		"-n",
+	_, err := Execute(Flags {
 		"data_columns.txt",
-	})
+		false,
+		false,
+		false,
+		true,
+		"",
+		-1,
 
-	//matched, _ := regexp.Match(`invalid syntax$`, []byte(err.Error()))
+	})
 
 	if err == nil {
 		t.Errorf("TestInvalidNumberSort faild")
@@ -157,10 +204,15 @@ func TestInvalidNumberSort (t *testing.T) {
 }
 
 func TestWriteInFile (t *testing.T) {
-	Execute([]string{
-		"-o",
-		"result.txt",
+	Execute(Flags {
 		"data.txt",
+		false,
+		false,
+		false,
+		false,
+		"result.txt",
+		-1,
+
 	})
 
 	exists := true
